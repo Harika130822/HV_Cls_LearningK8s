@@ -1,35 +1,68 @@
-# Three-Tier Flask and PostgreSQL App
+# Kubernetes Message Board App
 
-This is the standalone sample application used throughout the Kubernetes learning sessions.
+This is the sample application used throughout the Kubernetes learning sessions.
 
 The application folder owns only the app source code and Docker assets. Kubernetes manifests are intentionally kept outside this folder under `../sessions/` so each Kubernetes topic can introduce its own YAML step by step.
 
 ## Architecture
 
+The app can run in two shapes.
+
+Earlier sessions use the monolith entrypoint:
+
 ```text
-Browser UI -> Flask application -> PostgreSQL database
+Browser UI -> app.py on port 5000 -> PostgreSQL database
 ```
 
-Tiers:
+The ingress session uses separate microservice folders and separate images:
 
-- Presentation tier: HTML/CSS UI rendered in the browser.
-- Application tier: Python Flask app that handles requests and database operations.
-- Data tier: PostgreSQL stores submitted messages.
+```text
+Browser UI -> frontend/frontend.py on port 5000
+frontend -> user-service/user_service.py on port 5001 -> PostgreSQL
+frontend -> app-service/app_service.py on port 5002 -> PostgreSQL
 
-The app is a small message board. Users submit a name and message from the UI, Flask validates the input, and PostgreSQL stores the records.
+Ingress /          -> frontend
+Ingress /api/users -> user-service
+Ingress /api/apps  -> app-service
+```
+
+## Entrypoints
+
+| File | Purpose | Port |
+| --- | --- | --- |
+| `app/app.py` | Original monolith used by Sessions 01 and 02. | `5000` |
+| `frontend/frontend.py` | Browser UI used by Session 03. | `5000` |
+| `user-service/user_service.py` | User API used by Session 03. | `5001` |
+| `app-service/app_service.py` | Message/application API used by Session 03. | `5002` |
 
 ## Folder Structure
 
 ```text
-three-tier-flask-postgres-app/
-  app/
-    app.py
+app/
+  app-service/
+    app_service.py
+    database.py
+    Dockerfile
+    requirements.txt
+  frontend/
+    frontend.py
+    Dockerfile
     requirements.txt
     static/
     templates/
-  Dockerfile
+  user-service/
+    user_service.py
+    database.py
+    Dockerfile
+    requirements.txt
+  app/
+    app.py
+    database.py
+    requirements.txt
+    static/
+    templates/
+  Dockerfile              # legacy monolith image for Sessions 01 and 02
   docker-compose.yml
-  .dockerignore
 ```
 
 ## Local Development With Docker Compose
@@ -40,10 +73,20 @@ From this folder:
 docker compose up --build
 ```
 
-Open:
+Open the frontend:
 
 ```text
 http://localhost:5000
+```
+
+API endpoints:
+
+```text
+http://localhost:5001/api/users
+http://localhost:5001/api/users/stats
+http://localhost:5002/api/apps
+http://localhost:5002/api/apps/messages
+http://localhost:5002/api/apps/stats
 ```
 
 Stop the local environment:
@@ -58,13 +101,15 @@ Remove the local PostgreSQL volume too:
 docker compose down -v
 ```
 
-## Build the App Image
+## Build The Service Images
 
 ```bash
-docker build -t prashantdey/appk8stutorial:1.0 .
+docker build -t prashantdey/appk8stutorial:user-svc-2.0 ./user-service
+docker build -t prashantdey/appk8stutorial:app-svc-2.0 ./app-service
+docker build -t prashantdey/appk8stutorial:frontend-svc-2.0 ./frontend
 ```
 
-## Push to Docker Hub
+## Push To Docker Hub For EKS
 
 Login:
 
@@ -72,23 +117,25 @@ Login:
 docker login
 ```
 
-Push:
+Push the service image tags:
 
 ```bash
-docker push prashantdey/appk8stutorial:1.0
+docker push prashantdey/appk8stutorial:user-svc-2.0
+docker push prashantdey/appk8stutorial:app-svc-2.0
+docker push prashantdey/appk8stutorial:frontend-svc-2.0
 ```
 
-The Kubernetes session manifests use this image placeholder:
+The Kubernetes Session 03 ingress manifests use these image names:
 
 ```text
-prashantdey/appk8stutorial:1.0
+prashantdey/appk8stutorial:user-svc-2.0
+prashantdey/appk8stutorial:app-svc-2.0
+prashantdey/appk8stutorial:frontend-svc-2.0
 ```
-
-Before applying session manifests, replace it with your real Docker Hub image.
 
 ## App Configuration
 
-The Flask container reads database settings from environment variables:
+Database-backed entrypoints read these environment variables:
 
 | Variable | Purpose | Example |
 | --- | --- | --- |
@@ -97,12 +144,29 @@ The Flask container reads database settings from environment variables:
 | `DB_NAME` | Database name | `appdb` |
 | `DB_USER` | Database username | `appuser` |
 | `DB_PASSWORD` | Database password | `apppassword` |
-| `FLASK_SECRET_KEY` | Flask session secret | `change-this` |
+| `FLASK_SECRET_KEY` | Flask session secret for UI entrypoints | `change-this` |
+
+Frontend reads these service URLs:
+
+| Variable | Purpose | Example |
+| --- | --- | --- |
+| `USER_SERVICE_URL` | Internal URL for the user API | `http://user-service:5001/api/users` |
+| `APP_SERVICE_URL` | Internal URL for the app API | `http://app-service:5002/api/apps` |
+| `USER_SERVICE_HEALTH_URL` | Readiness URL for user-service | `http://user-service:5001/readyz` |
+| `APP_SERVICE_HEALTH_URL` | Readiness URL for app-service | `http://app-service:5002/readyz` |
 
 Health endpoints:
 
 - `/healthz`: process health check.
-- `/readyz`: database connectivity check.
+- `/readyz`: database or downstream service readiness check.
+
+API endpoints:
+
+- `/api/users`: list or create users.
+- `/api/users/stats`: user count.
+- `/api/apps`: app-service info.
+- `/api/apps/messages`: list or create messages.
+- `/api/apps/stats`: message count.
 
 ## Kubernetes Sessions
 
@@ -116,3 +180,4 @@ Current sessions:
 
 - `01-core-k8s`: Namespace, Pod, Deployment, Service, labels, selectors, and basic troubleshooting.
 - `02-storage-pv-pvc-statefulset`: PV, PVC, StorageClass, StatefulSet, and database persistence.
+- `03-ingress`: frontend, user-service, app-service, and Ingress path routing.

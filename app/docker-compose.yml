@@ -14,23 +14,56 @@ services:
       timeout: 3s
       retries: 10
 
-  web:
+  user-service:
     build:
-      context: .
-    image: prashantdey/appk8stutorial:1.0
-    container_name: three-tier-flask
+      context: ./user-service
+    image: prashantdey/appk8stutorial:user-svc-2.0
+    container_name: message-board-user-service
     environment:
       DB_HOST: db
       DB_PORT: "5432"
       DB_NAME: appdb
       DB_USER: appuser
       DB_PASSWORD: apppassword
+    ports:
+      - "5001:5001"
+    depends_on:
+      db:
+        condition: service_healthy
+
+  app-service:
+    build:
+      context: ./app-service
+    image: prashantdey/appk8stutorial:app-svc-2.0
+    container_name: message-board-app-service
+    environment:
+      DB_HOST: db
+      DB_PORT: "5432"
+      DB_NAME: appdb
+      DB_USER: appuser
+      DB_PASSWORD: apppassword
+    ports:
+      - "5002:5002"
+    depends_on:
+      db:
+        condition: service_healthy
+
+  frontend:
+    build:
+      context: ./frontend
+    image: prashantdey/appk8stutorial:frontend-svc-2.0
+    container_name: message-board-frontend
+    environment:
+      USER_SERVICE_URL: http://user-service:5001/api/users
+      APP_SERVICE_URL: http://app-service:5002/api/apps
+      USER_SERVICE_HEALTH_URL: http://user-service:5001/readyz
+      APP_SERVICE_HEALTH_URL: http://app-service:5002/readyz
       FLASK_SECRET_KEY: local-dev-secret
     ports:
       - "5000:5000"
     depends_on:
-      db:
-        condition: service_healthy
+      - user-service
+      - app-service
 
 volumes:
   postgres-data:
