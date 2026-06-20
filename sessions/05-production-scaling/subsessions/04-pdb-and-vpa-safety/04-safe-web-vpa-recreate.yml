@@ -1,0 +1,27 @@
+apiVersion: autoscaling.k8s.io/v1
+kind: VerticalPodAutoscaler
+metadata:
+  name: safe-web
+  namespace: app-scaling-prod
+  labels:
+    app: safe-web
+    scaling-demo: pdb-vpa
+spec:
+  targetRef:
+    apiVersion: apps/v1
+    kind: Deployment
+    name: safe-web
+  updatePolicy:
+    updateMode: "Recreate"
+  resourcePolicy:
+    containerPolicies:
+      - containerName: safe-web
+        controlledResources:
+          - cpu
+          - memory
+        minAllowed:
+          cpu: "50m"
+          memory: "64Mi"
+        maxAllowed:
+          cpu: "1"
+          memory: "1Gi"

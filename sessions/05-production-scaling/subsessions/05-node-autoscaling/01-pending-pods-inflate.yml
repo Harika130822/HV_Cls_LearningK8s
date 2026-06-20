@@ -1,0 +1,32 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: pending-pods-inflate
+  namespace: app-scaling-prod
+  labels:
+    app: pending-pods-inflate
+    scaling-demo: node-autoscaling
+spec:
+  replicas: 12
+  selector:
+    matchLabels:
+      app: pending-pods-inflate
+      scaling-demo: node-autoscaling
+  template:
+    metadata:
+      labels:
+        app: pending-pods-inflate
+        scaling-demo: node-autoscaling
+    spec:
+      terminationGracePeriodSeconds: 0
+      containers:
+        - name: pause
+          image: public.ecr.aws/eks-distro/kubernetes/pause:3.7
+          imagePullPolicy: IfNotPresent
+          resources:
+            requests:
+              cpu: "800m"
+              memory: "64Mi"
+            limits:
+              cpu: "800m"
+              memory: "128Mi"

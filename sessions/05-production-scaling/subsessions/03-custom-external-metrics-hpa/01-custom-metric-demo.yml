@@ -1,0 +1,118 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: custom-metric-demo
+  namespace: app-scaling-prod
+  labels:
+    app: custom-metric-demo
+    scaling-demo: custom-metrics
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: custom-metric-demo
+      scaling-demo: custom-metrics
+  template:
+    metadata:
+      labels:
+        app: custom-metric-demo
+        scaling-demo: custom-metrics
+      annotations:
+        prometheus.io/scrape: "true"
+        prometheus.io/path: /metrics
+        prometheus.io/port: "8080"
+    spec:
+      containers:
+        - name: custom-metric-demo
+          image: python:3.12-alpine
+          imagePullPolicy: IfNotPresent
+          command:
+            - python
+            - -c
+          args:
+            - |
+              from http.server import BaseHTTPRequestHandler, HTTPServer
+              import os
+              import time
+
+              requests_total = 0
+              work_total = 0
+              start_time = time.time()
+
+              class Handler(BaseHTTPRequestHandler):
+                  def log_message(self, fmt, *args):
+                      return
+
+                  def do_GET(self):
+                      global requests_total, work_total
+                      if self.path.startswith("/metrics"):
+                          pod = os.environ.get("HOSTNAME", "unknown")
+                          namespace = open("/var/run/secrets/kubernetes.io/serviceaccount/namespace").read().strip()
+                          body = (
+                              "# TYPE http_requests_total counter\n"
+                              f"http_requests_total{{namespace=\"{namespace}\",pod=\"{pod}\"}} {requests_total}\n"
+                              "# TYPE work_items_total counter\n"
+                              f"work_items_total{{namespace=\"{namespace}\",pod=\"{pod}\"}} {work_total}\n"
+                              "# TYPE process_uptime_seconds gauge\n"
+                              f"process_uptime_seconds{{namespace=\"{namespace}\",pod=\"{pod}\"}} {int(time.time() - start_time)}\n"
+                          )
+                      elif self.path.startswith("/work"):
+                          requests_total += 1
+                          work_total += 1
+                          body = "work accepted\n"
+                      elif self.path.startswith("/healthz") or self.path.startswith("/readyz"):
+                          body = "ok\n"
+                      else:
+                          requests_total += 1
+                          body = "ok\n"
+                      self.send_response(200)
+                      self.send_header("Content-Type", "text/plain")
+                      self.end_headers()
+                      self.wfile.write(body.encode())
+
+              HTTPServer(("0.0.0.0", 8080), Handler).serve_forever()
+          ports:
+            - name: http
+              containerPort: 8080
+          readinessProbe:
+            httpGet:
+              path: /readyz
+              port: 8080
+            initialDelaySeconds: 5
+            periodSeconds: 5
+          livenessProbe:
+            httpGet:
+              path: /healthz
+              port: 8080
+            initialDelaySeconds: 10
+            periodSeconds: 10
+          resources:
+            requests:
+              cpu: "100m"
+              memory: "128Mi"
+            limits:
+              cpu: "500m"
+              memory: "512Mi"
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: custom-metric-demo
+  namespace: app-scaling-prod
+  labels:
+    app: custom-metric-demo
+    scaling-demo: custom-metrics
+  annotations:
+    prometheus.io/scrape: "true"
+    prometheus.io/path: /metrics
+    prometheus.io/port: "80"
+spec:
+  type: ClusterIP
+  selector:
+    app: custom-metric-demo
+    scaling-demo: custom-metrics
+  ports:
+    - name: http
+      protocol: TCP
+      port: 80
+      targetPort: 8080

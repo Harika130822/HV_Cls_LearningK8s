@@ -1,6 +1,6 @@
 # Session 02: Persistent Storage, PV/PVC, StorageClass, And StatefulSet
 
-This session continues the same Flask/PostgreSQL sample app from Session 01, but focuses on persistent storage.
+This session continues the same Flask/PostgreSQL sample app from Session 01, but focuses on persistent storage and the Kubernetes controller that fits stateful workloads.
 
 App image:
 
@@ -24,7 +24,7 @@ Follow the sub-sessions in this order:
 3. `subsessions/03-postgres-with-static-pvc`: run PostgreSQL with the PVC and prove storage survives Pod replacement.
 4. `subsessions/04-flask-with-persistent-db`: connect the Flask app to the persistent PostgreSQL database.
 5. `subsessions/05-storageclass`: introduce dynamic provisioning with an EKS gp3 StorageClass.
-6. `subsessions/06-postgres-statefulset`: run PostgreSQL as a StatefulSet with `volumeClaimTemplates`.
+6. `subsessions/06-postgres-statefulset`: replace the database Deployment with a StatefulSet and `volumeClaimTemplates`.
 
 ## Target Shape By The End
 
@@ -38,7 +38,7 @@ Browser
             -> PV created by StorageClass
 ```
 
-## Full Static PV/PVC Apply Order
+## Part 1: Static PV/PVC Apply Order
 
 From `sessions/02-storage-pv-pvc-statefulset`:
 
@@ -49,7 +49,14 @@ kubectl apply -f subsessions/03-postgres-with-static-pvc/
 kubectl apply -f subsessions/04-flask-with-persistent-db/
 ```
 
-## Full StatefulSet Apply Order
+Use this part to show the mechanics:
+
+- PV is the storage resource.
+- PVC is the request for storage.
+- PostgreSQL mounts the PVC.
+- Data survives a Pod replacement because the data is outside the container filesystem.
+
+## Part 2: StatefulSet Apply Order
 
 For EKS dynamic storage:
 
@@ -58,6 +65,12 @@ kubectl apply -f subsessions/01-storage-problem-and-shared-config/
 kubectl apply -f subsessions/05-storageclass/
 kubectl apply -f subsessions/06-postgres-statefulset/
 kubectl apply -f subsessions/04-flask-with-persistent-db/
+```
+
+If the static PostgreSQL Deployment is still running, remove it before applying the StatefulSet:
+
+```bash
+kubectl delete -f subsessions/03-postgres-with-static-pvc/ --ignore-not-found
 ```
 
 If the cluster already has a suitable default StorageClass, you can still use the provided gp3 StorageClass for explicit teaching.
@@ -83,4 +96,5 @@ kubectl delete -f subsessions/01-storage-problem-and-shared-config/ --ignore-not
 3. Why is `hostPath` useful for learning but risky for production?
 4. What does a StorageClass add?
 5. Why does a StatefulSet fit PostgreSQL better than a normal Deployment?
-
+6. Why does a StatefulSet need a headless Service?
+7. Why are StatefulSet PVCs retained after the StatefulSet is deleted?

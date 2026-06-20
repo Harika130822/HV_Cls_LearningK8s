@@ -1,0 +1,41 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: auto-mode-custom-inflate
+  namespace: app-scaling-prod
+  labels:
+    app: auto-mode-custom-inflate
+    scaling-demo: eks-auto-mode
+spec:
+  replicas: 4
+  selector:
+    matchLabels:
+      app: auto-mode-custom-inflate
+      scaling-demo: eks-auto-mode
+  template:
+    metadata:
+      labels:
+        app: auto-mode-custom-inflate
+        scaling-demo: eks-auto-mode
+    spec:
+      terminationGracePeriodSeconds: 0
+      nodeSelector:
+        eks.amazonaws.com/compute-type: auto
+        billing-team: training
+      securityContext:
+        runAsUser: 1000
+        runAsGroup: 3000
+        fsGroup: 2000
+      containers:
+        - name: pause
+          image: public.ecr.aws/eks-distro/kubernetes/pause:3.7
+          imagePullPolicy: IfNotPresent
+          resources:
+            requests:
+              cpu: "1"
+              memory: "128Mi"
+            limits:
+              cpu: "1"
+              memory: "256Mi"
+          securityContext:
+            allowPrivilegeEscalation: false

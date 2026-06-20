@@ -1,0 +1,92 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: user-service
+  namespace: app-ingress
+  labels:
+    app: user-service
+    tier: api
+    microservice: users
+spec:
+  replicas: 2
+  selector:
+    matchLabels:
+      app: user-service
+      tier: api
+      microservice: users
+  template:
+    metadata:
+      labels:
+        app: user-service
+        tier: api
+        microservice: users
+    spec:
+      containers:
+        - name: user-service
+          image: prashantdey/appk8stutorial:user-svc-2.0
+          imagePullPolicy: IfNotPresent
+          ports:
+            - name: http
+              containerPort: 5001
+          env:
+            - name: DB_HOST
+              valueFrom:
+                configMapKeyRef:
+                  name: app-config
+                  key: DB_HOST
+            - name: DB_PORT
+              valueFrom:
+                configMapKeyRef:
+                  name: app-config
+                  key: DB_PORT
+            - name: DB_NAME
+              valueFrom:
+                secretKeyRef:
+                  name: app-secrets
+                  key: POSTGRES_DB
+            - name: DB_USER
+              valueFrom:
+                secretKeyRef:
+                  name: app-secrets
+                  key: POSTGRES_USER
+            - name: DB_PASSWORD
+              valueFrom:
+                secretKeyRef:
+                  name: app-secrets
+                  key: POSTGRES_PASSWORD
+          readinessProbe:
+            httpGet:
+              path: /readyz
+              port: 5001
+            initialDelaySeconds: 8
+            periodSeconds: 5
+          livenessProbe:
+            httpGet:
+              path: /healthz
+              port: 5001
+            initialDelaySeconds: 20
+            periodSeconds: 10
+          resources:
+            requests:
+              cpu: "100m"
+              memory: "128Mi"
+            limits:
+              cpu: "500m"
+              memory: "256Mi"
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: user-service
+  namespace: app-ingress
+spec:
+  type: ClusterIP
+  selector:
+    app: user-service
+    tier: api
+    microservice: users
+  ports:
+    - name: http
+      protocol: TCP
+      port: 5001
+      targetPort: 5001

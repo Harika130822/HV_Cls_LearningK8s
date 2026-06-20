@@ -1,0 +1,17 @@
+apiVersion: v1
+kind: Service
+metadata:
+  name: mix-web
+  namespace: daemonset-lab
+  labels:
+    app: mix-web
+    workload: deployment
+spec:
+  type: ClusterIP
+  selector:
+    app: mix-web
+    workload: deployment
+  ports:
+    - name: http
+      port: 80
+      targetPort: http

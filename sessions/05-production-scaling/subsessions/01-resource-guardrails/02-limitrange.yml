@@ -1,0 +1,23 @@
+apiVersion: v1
+kind: LimitRange
+metadata:
+  name: scaling-defaults
+  namespace: app-scaling-prod
+spec:
+  limits:
+    - type: Container
+      defaultRequest:
+        cpu: "100m"
+        memory: "128Mi"
+      default:
+        cpu: "500m"
+        memory: "512Mi"
+      min:
+        cpu: "25m"
+        memory: "32Mi"
+      max:
+        cpu: "2"
+        memory: "2Gi"
+      maxLimitRequestRatio:
+        cpu: "10"
+        memory: "8"

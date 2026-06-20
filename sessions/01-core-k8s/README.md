@@ -5,7 +5,7 @@ This session implements the standalone Flask/PostgreSQL app in Kubernetes one st
 App source:
 
 ```text
-../../three-tier-flask-postgres-app
+../../app
 ```
 
 App image used by this session:
@@ -44,7 +44,7 @@ Browser
 From the app folder:
 
 ```bash
-cd ../../three-tier-flask-postgres-app
+cd ../../app
 docker build -t prashantdey/appk8stutorial:1.0 .
 docker push prashantdey/appk8stutorial:1.0
 ```
@@ -90,4 +90,3 @@ kubectl delete -f subsessions/01-namespace/ --ignore-not-found
 4. What is the limitation of a standalone Pod?
 5. What does a Deployment add on top of Pods?
 6. How does a Service know which Pods should receive traffic?
-

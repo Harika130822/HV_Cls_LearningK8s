@@ -2,13 +2,13 @@ apiVersion: v1
 kind: Service
 metadata:
   name: postgres-headless
-  namespace: app-storage
+  namespace: app-ingress
 spec:
   clusterIP: None
   selector:
     app: postgres
     tier: data
-    storage-demo: stateful
+    session: ingress
   ports:
     - name: postgres
       port: 5432
@@ -18,13 +18,13 @@ apiVersion: v1
 kind: Service
 metadata:
   name: postgres
-  namespace: app-storage
+  namespace: app-ingress
 spec:
   type: ClusterIP
   selector:
     app: postgres
     tier: data
-    storage-demo: stateful
+    session: ingress
   ports:
     - name: postgres
       port: 5432
@@ -34,11 +34,11 @@ apiVersion: apps/v1
 kind: StatefulSet
 metadata:
   name: postgres-stateful
-  namespace: app-storage
+  namespace: app-ingress
   labels:
     app: postgres
     tier: data
-    storage-demo: stateful
+    session: ingress
 spec:
   serviceName: postgres-headless
   replicas: 1
@@ -46,13 +46,13 @@ spec:
     matchLabels:
       app: postgres
       tier: data
-      storage-demo: stateful
+      session: ingress
   template:
     metadata:
       labels:
         app: postgres
         tier: data
-        storage-demo: stateful
+        session: ingress
     spec:
       containers:
         - name: postgres
@@ -109,7 +109,7 @@ spec:
         name: postgres-data
         labels:
           app: postgres
-          storage-demo: stateful
+          session: ingress
       spec:
         accessModes:
           - ReadWriteOnce

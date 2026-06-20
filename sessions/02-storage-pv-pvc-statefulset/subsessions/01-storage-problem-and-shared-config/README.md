@@ -46,4 +46,3 @@ kubectl get namespace app-storage
 kubectl get configmap -n app-storage
 kubectl get secret -n app-storage
 ```
-

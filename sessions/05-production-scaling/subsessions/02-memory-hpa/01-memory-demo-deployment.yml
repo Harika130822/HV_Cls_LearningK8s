@@ -1,0 +1,95 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: memory-demo
+  namespace: app-scaling-prod
+  labels:
+    app: memory-demo
+    scaling-demo: memory-hpa
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: memory-demo
+      scaling-demo: memory-hpa
+  template:
+    metadata:
+      labels:
+        app: memory-demo
+        scaling-demo: memory-hpa
+    spec:
+      containers:
+        - name: memory-demo
+          image: python:3.12-alpine
+          imagePullPolicy: IfNotPresent
+          command:
+            - python
+            - -c
+          args:
+            - |
+              from http.server import BaseHTTPRequestHandler, HTTPServer
+
+              chunks = []
+
+              class Handler(BaseHTTPRequestHandler):
+                  def log_message(self, fmt, *args):
+                      return
+
+                  def do_GET(self):
+                      if self.path.startswith("/allocate"):
+                          chunks.append(bytearray(2 * 1024 * 1024))
+                          body = f"allocated_chunks={len(chunks)} approx_mib={len(chunks) * 2}\n"
+                      elif self.path.startswith("/release"):
+                          chunks.clear()
+                          body = "released\n"
+                      elif self.path.startswith("/healthz") or self.path.startswith("/readyz"):
+                          body = "ok\n"
+                      else:
+                          body = "use /allocate, /release, /healthz, or /readyz\n"
+                      self.send_response(200)
+                      self.send_header("Content-Type", "text/plain")
+                      self.end_headers()
+                      self.wfile.write(body.encode())
+
+              HTTPServer(("0.0.0.0", 8080), Handler).serve_forever()
+          ports:
+            - name: http
+              containerPort: 8080
+          readinessProbe:
+            httpGet:
+              path: /readyz
+              port: 8080
+            initialDelaySeconds: 5
+            periodSeconds: 5
+          livenessProbe:
+            httpGet:
+              path: /healthz
+              port: 8080
+            initialDelaySeconds: 10
+            periodSeconds: 10
+          resources:
+            requests:
+              cpu: "50m"
+              memory: "64Mi"
+            limits:
+              cpu: "250m"
+              memory: "192Mi"
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: memory-demo
+  namespace: app-scaling-prod
+  labels:
+    app: memory-demo
+    scaling-demo: memory-hpa
+spec:
+  type: ClusterIP
+  selector:
+    app: memory-demo
+    scaling-demo: memory-hpa
+  ports:
+    - name: http
+      protocol: TCP
+      port: 80
+      targetPort: 8080

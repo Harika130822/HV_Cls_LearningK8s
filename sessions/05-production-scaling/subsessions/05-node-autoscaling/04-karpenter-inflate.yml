@@ -1,0 +1,34 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: karpenter-inflate
+  namespace: app-scaling-prod
+  labels:
+    app: karpenter-inflate
+    scaling-demo: karpenter
+spec:
+  replicas: 4
+  selector:
+    matchLabels:
+      app: karpenter-inflate
+      scaling-demo: karpenter
+  template:
+    metadata:
+      labels:
+        app: karpenter-inflate
+        scaling-demo: karpenter
+    spec:
+      terminationGracePeriodSeconds: 0
+      nodeSelector:
+        workload-tier: training-general
+      containers:
+        - name: pause
+          image: public.ecr.aws/eks-distro/kubernetes/pause:3.7
+          imagePullPolicy: IfNotPresent
+          resources:
+            requests:
+              cpu: "1"
+              memory: "128Mi"
+            limits:
+              cpu: "1"
+              memory: "256Mi"

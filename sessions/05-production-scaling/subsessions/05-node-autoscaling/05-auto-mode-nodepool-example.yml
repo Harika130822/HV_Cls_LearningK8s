@@ -1,0 +1,49 @@
+apiVersion: karpenter.sh/v1
+kind: NodePool
+metadata:
+  name: auto-training
+spec:
+  template:
+    metadata:
+      labels:
+        billing-team: training
+    spec:
+      nodeClassRef:
+        group: eks.amazonaws.com
+        kind: NodeClass
+        name: default
+      requirements:
+        - key: eks.amazonaws.com/instance-category
+          operator: In
+          values:
+            - c
+            - m
+            - r
+        - key: eks.amazonaws.com/instance-cpu
+          operator: In
+          values:
+            - "2"
+            - "4"
+            - "8"
+        - key: kubernetes.io/arch
+          operator: In
+          values:
+            - amd64
+        - key: karpenter.sh/capacity-type
+          operator: In
+          values:
+            - on-demand
+        - key: topology.kubernetes.io/zone
+          operator: In
+          values:
+            - us-east-2a
+            - us-east-2b
+            - us-east-2c
+  limits:
+    cpu: "20"
+    memory: 80Gi
+  disruption:
+    consolidationPolicy: WhenEmptyOrUnderutilized
+    consolidateAfter: 1m
+    budgets:
+      - nodes: 10%

@@ -1,7 +1,7 @@
 # Kubernetes Training Notes
 
 This repository contains Kubernetes examples for Batch 16A, including simple root
-manifests and a three-tier Flask/PostgreSQL learning app under `sessions/`.
+manifests and an incremental Flask/PostgreSQL learning app under `sessions/`.
 
 ## Current EKS Version
 
@@ -115,6 +115,10 @@ Session guides are available in:
 ```text
 sessions/01-core-k8s/README.md
 sessions/02-storage-pv-pvc-statefulset/README.md
+sessions/03-ingress/README.md
+sessions/04-hpa-vpa/README.md
+sessions/05-production-scaling/README.md
+sessions/06-daemonsets/README.md
 ```
 
 Session 01 covers core Kubernetes objects:
@@ -128,18 +132,68 @@ kubectl apply -f subsessions/05-flask-deployment/
 kubectl apply -f subsessions/06-flask-services/01-flask-service-clusterip.yml
 ```
 
-Session 02 covers persistent storage, PVCs, StorageClass, and StatefulSet:
+Session 02 covers persistent storage, PVs, PVCs, StorageClass, and StatefulSet:
 
 ```bash
 cd sessions/02-storage-pv-pvc-statefulset
 kubectl apply -f subsessions/01-storage-problem-and-shared-config/
-kubectl apply -f subsessions/02-static-pv-pvc/
-kubectl apply -f subsessions/03-postgres-with-static-pvc/
+kubectl apply -f subsessions/05-storageclass/
+kubectl apply -f subsessions/06-postgres-statefulset/
 kubectl apply -f subsessions/04-flask-with-persistent-db/
 ```
 
-For the dynamic EBS StorageClass example in Session 02, the cluster also needs
-the Amazon EBS CSI driver installed.
+Session 03 covers Ingress routing to a frontend, user-service, and app-service:
+
+```bash
+cd sessions/03-ingress
+kubectl apply -f subsessions/01-shared-config/
+kubectl apply -f subsessions/02-storageclass/
+kubectl apply -f subsessions/03-postgres-statefulset/
+kubectl apply -f subsessions/04-api-microservices/
+kubectl apply -f subsessions/05-frontend/
+kubectl apply -f subsessions/06-ingress/
+```
+
+Session 04 covers Horizontal Pod Autoscaler and Vertical Pod Autoscaler:
+
+```bash
+cd sessions/04-hpa-vpa
+kubectl apply -f subsessions/01-prerequisites-and-namespace/
+kubectl apply -f subsessions/02-hpa-cpu-autoscaling/01-cpu-demo-deployment.yml
+kubectl apply -f subsessions/02-hpa-cpu-autoscaling/02-cpu-demo-hpa.yml
+kubectl apply -f subsessions/02-hpa-cpu-autoscaling/03-load-generator.yml
+```
+
+For the dynamic EBS StorageClass examples in Sessions 02-03, the cluster needs
+the Amazon EBS CSI driver installed. For Session 03 on EKS, the cluster also
+needs the AWS Load Balancer Controller installed because the Ingress uses
+`ingressClassName: alb`.
+
+For Session 04, the cluster needs Metrics Server for HPA and VPA resource
+metrics. VPA is installed separately before running the VPA sub-session.
+
+Session 05 covers production scaling patterns, including memory HPA, custom and
+external metric HPA, ResourceQuota, LimitRange, PodDisruptionBudget, Cluster
+Autoscaler, Karpenter, and EKS Auto Mode:
+
+```bash
+cd sessions/05-production-scaling
+kubectl apply -f subsessions/01-resource-guardrails/
+kubectl apply -f subsessions/02-memory-hpa/
+```
+
+Run the custom metrics, VPA safety, and node autoscaling sub-sessions only after
+their required adapters, CRDs, or EKS node scaling mode are available.
+
+Session 06 covers DaemonSets, the difference between DaemonSets and
+Deployments, and how both run together in the same cluster:
+
+```bash
+cd sessions/06-daemonsets
+kubectl apply -f subsessions/01-prerequisites-and-namespace/
+kubectl apply -f subsessions/02-daemonset-basics/
+kubectl apply -f subsessions/03-deployment-and-daemonset-mix/
+```
 
 ## Delete The EKS Cluster
 
