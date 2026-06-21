@@ -121,6 +121,7 @@ sessions/05-production-scaling/README.md
 sessions/06-daemonsets/README.md
 sessions/07-argocd/README.md
 sessions/08-rbac/README.md
+sessions/09-cni-networking/README.md
 ```
 
 Session 01 covers core Kubernetes objects:
@@ -234,6 +235,21 @@ kubectl apply -f subsessions/05-clusterrolebinding-for-cluster-scope/
 This session uses ServiceAccount impersonation checks such as
 `kubectl auth can-i --as=system:serviceaccount:rbac-lab:dev-reader` to show
 exactly which permissions were granted and which permissions remain denied.
+
+Session 09 covers Kubernetes CNI and networking from Linux fundamentals to
+eBPF-based dataplanes. It includes network namespaces, veth pairs, bridges,
+routing, overlays, IPAM, CNI plugin flow, EKS AWS VPC CNI, NetworkPolicy,
+Calico, Cilium, Multus, limitations, and troubleshooting:
+
+```bash
+cd sessions/09-cni-networking
+kubectl apply -f subsessions/06-network-policy/01-namespace.yml
+kubectl apply -f subsessions/06-network-policy/02-connectivity-demo.yml
+```
+
+The runnable lab is intentionally limited to safe application connectivity and
+NetworkPolicy practice. CNI replacement and eBPF install examples are included
+as guided discussion material and should be tested only on disposable clusters.
 
 ## Delete The EKS Cluster
 
